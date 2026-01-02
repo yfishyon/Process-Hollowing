@@ -17,17 +17,11 @@ jobs:
     - name: Setup Visual Studio
       uses: microsoft/setup-msbuild@v2
     
-    - name: Configure CMake
-      shell: cmd
-      run: |
-        cd "Source/Process Hollowing"
-        cmake -B build -G "Visual Studio 17 2022" -A x64
-    
     - name: Build with MSBuild
       shell: cmd
       run: |
-        cd "Source/Process Hollowing"
-        msbuild build/runpe.sln /p:Configuration=Release /p:Platform=x64 /m
+        cd "Source"
+        msbuild "Process Hollowing.sln" /p:Configuration=Release /p:Platform=x64 /m
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
