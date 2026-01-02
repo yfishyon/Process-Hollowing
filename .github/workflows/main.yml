@@ -22,7 +22,11 @@ jobs:
       run: |
         cd "Source"
         msbuild "Process Hollowing.sln" /p:Configuration=Release /p:Platform=x64 /m
-    
+    - name: list
+      shell: cmd
+      run: |
+        cd "Source"
+        tree    
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
