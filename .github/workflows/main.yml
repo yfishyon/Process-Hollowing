@@ -1,4 +1,4 @@
-name: Build Windows C++ Project
+name: Build Process Hollowing
 
 on:
   push:
@@ -11,24 +11,61 @@ jobs:
     runs-on: windows-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Setup Visual Studio
-      uses: microsoft/setup-msbuild@v2
+    - name: Show directory structure
+      run: |
+        cd Source
+        dir /s /b *.cpp
+        dir /s /b *.sln
+        dir /s /b CMakeLists.txt || echo "No CMakeLists.txt found"
     
-    - name: Build with MSBuild
-      shell: cmd
+    # 方案1: 直接使用MSBuild编译.sln文件
+    - name: Build with MSBuild (from .sln)
       run: |
         cd "Source"
-        msbuild "Process Hollowing.sln" /p:Configuration=Release /p:Platform=x64 /m
-    - name: list
-      shell: cmd
+        msbuild "Process Hollowing.sln" /p:Configuration=Release /p:Platform=x64
+    
+    # 方案2: 如果没有CMakeLists.txt，创建一个临时使用
+    - name: Create CMakeLists.txt if needed
       run: |
         cd "Source"
-        tree    
-    - name: Upload artifact
+        if not exist CMakeLists.txt (
+          echo Creating CMakeLists.txt...
+          echo cmake_minimum_required(VERSION 3.0) > CMakeLists.txt
+          echo project(runpe) >> CMakeLists.txt
+          echo set(CMAKE_CXX_STANDARD 17) >> CMakeLists.txt
+          echo add_executable(runpe "Process Hollowing/Process_Hollowing.cpp") >> CMakeLists.txt
+        )
+    
+    - name: Build with CMake (if using CMake)
+      run: |
+        cd "Source"
+        mkdir build 2>nul || true
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+        cmake --build . --config Release
+    
+    - name: Find and upload artifacts
+      run: |
+        echo "Searching for executables..."
+        dir /s /b *.exe
+        
+        # 尝试从不同位置找到可执行文件
+        if exist "Source\x64\Release\runpe.exe" (
+          echo "Found in Source\x64\Release\"
+        ) elseif exist "Source\Process Hollowing\x64\Release\*.exe" (
+          echo "Found in Source\Process Hollowing\x64\Release\"
+        ) elseif exist "Source\build\Release\runpe.exe" (
+          echo "Found in Source\build\Release\"
+        )
+    
+    - name: Upload executable
       uses: actions/upload-artifact@v4
       with:
-        name: runpe-executable
-        path: "Source/Process Hollowing/build/Release/runpe.exe"
+        name: process-hollowing-exe
+        path: |
+          Source/x64/Release/*.exe
+          Source/Process Hollowing/x64/Release/*.exe
+          Source/build/Release/*.exe
+        if-no-files-found: warn
